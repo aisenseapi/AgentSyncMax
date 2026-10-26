@@ -1,0 +1,175 @@
+{
+  "version": "4.25.1",
+  "fileLockRetryDelayMs": 300,
+  "maxRetryCount": 5,
+  "metadataReadLines": 100,
+  "projectAliases": {},
+  "watcher": {
+    "debounceMs": 30000,
+    "safetyScanSeconds": 900,
+    "maxDirtyWaitSeconds": 120,
+    "incrementalSync": true
+  },
+  "projectIndex": {
+    "directory": "project-index",
+    "refreshSeconds": 60
+  },
+  "projectResolution": {
+    "preferExistingAncestor": true
+  },
+  "activity": {
+    "parallelWarningSeconds": 120,
+    "pruneAfterDays": 14
+  },
+  "safety": {
+    "protectAppendOnly": true,
+    "overwrittenRetentionDays": 7,
+    "overwrittenKeepPerFile": 3
+  },
+  "projectGuidance": {
+    "enabled": false
+  },
+  "statusReport": {
+    "enabled": true,
+    "file": "AgentSync-Status.html",
+    "jsonFile": "AgentSync-Status.json",
+    "refreshSeconds": 300
+  },
+  "intelligenceReport": {
+    "enabled": true,
+    "file": "AgentSync-Intelligence.html",
+    "dataFile": "AgentSync-Intelligence.json",
+    "refreshSeconds": 900,
+    "maxTimelineSessions": 1000
+  },
+  "logging": {
+    "directory": "logs",
+    "maxBytes": 5242880,
+    "maxFiles": 5
+  },
+  "archive": {
+    "enabled": false,
+    "archiveAfterDays": 90,
+    "deleteAfterDays": 0
+  },
+  "agents": [
+    {
+      "name": "claude",
+      "enabled": false,
+      "localPath": "~/.claude/projects",
+      "targetSubDir": ".agent-state/claude/sessions",
+      "fileFilter": "*.jsonl",
+      "fileFilters": [
+        "*.jsonl",
+        "memory/*.md"
+      ],
+      "routingMode": "claude"
+    },
+    {
+      "name": "codex-archived",
+      "enabled": false,
+      "localPath": "~/.codex/archived_sessions",
+      "targetSubDir": ".agent-state/codex/archived_sessions",
+      "fileFilter": "*.jsonl",
+      "routingMode": "codex"
+    },
+    {
+      "name": "codex",
+      "enabled": false,
+      "localPath": "~/.codex/sessions",
+      "targetSubDir": ".agent-state/codex/sessions",
+      "fileFilter": "*.jsonl",
+      "routingMode": "codex",
+      "skipRestoreIfPresentIn": [
+        "~/.codex/archived_sessions"
+      ]
+    },
+    {
+      "name": "antigravity",
+      "enabled": false,
+      "targetSubDir": ".agent-state/antigravity",
+      "routingMode": "antigravity",
+      "roots": [
+        {
+          "surface": "cli",
+          "localPath": "~/.gemini/antigravity-cli"
+        },
+        {
+          "surface": "ide",
+          "localPath": "~/.gemini/antigravity-ide"
+        },
+        {
+          "surface": "desktop",
+          "localPath": "~/.gemini/antigravity"
+        }
+      ]
+    },
+    {
+      "name": "opencode",
+      "enabled": false,
+      "localPath": "~/.local/share/opencode",
+      "targetSubDir": ".agent-state/opencode/sessions",
+      "routingMode": "opencode",
+      "command": "opencode",
+      "commandWindows": "~/.opencode/bin/opencode.exe",
+      "commandTimeoutSeconds": 120
+    },
+    {
+      "name": "cline",
+      "enabled": false,
+      "targetSubDir": ".agent-state/cline",
+      "routingMode": "cline",
+      "roots": [
+        {
+          "surface": "vscode",
+          "format": "legacy",
+          "localPathWindows": "%APPDATA%/Code/User/globalStorage/saoudrizwan.claude-dev",
+          "localPathMacOS": "~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev",
+          "localPathLinux": "~/.config/Code/User/globalStorage/saoudrizwan.claude-dev"
+        },
+        {
+          "surface": "sdk",
+          "format": "manifest",
+          "localPath": "~/.cline/data/sessions"
+        }
+      ],
+      "ollama": {
+        "enabled": false,
+        "baseUrl": "http://127.0.0.1:11434",
+        "transport": "local or SSH tunnel",
+        "syncCredentials": false,
+        "syncModels": false
+      }
+    },
+    {
+      "name": "junie",
+      "enabled": false,
+      "targetSubDir": ".agent-state/junie",
+      "routingMode": "junie",
+      "roots": [
+        {
+          "surface": "ide",
+          "localPathWindows": "%LOCALAPPDATA%/JetBrains",
+          "localPathMacOS": "~/Library/Caches/JetBrains",
+          "localPathLinux": "~/.cache/JetBrains",
+          "optionsPathWindows": "%APPDATA%/JetBrains",
+          "optionsPathMacOS": "~/Library/Application Support/JetBrains",
+          "optionsPathLinux": "~/.config/JetBrains"
+        }
+      ]
+    }
+  ],
+  "sharedProjectsDir": "",
+  "missionControl": {
+    "timeoutMinutes": 120
+  },
+  "history": {
+    "enabled": false,
+    "largeFileMB": 50,
+    "storeLargeFiles": true,
+    "minFreeGB": 20,
+    "quietMinutes": 10,
+    "maxDirtyMinutes": 60,
+    "timeBudgetSeconds": 120
+  }
+}

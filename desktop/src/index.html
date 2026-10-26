@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AgentSync Max</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="wiki-review.css">
+</head>
+<body>
+  <div class="shell">
+    <aside id="projectDrawer" class="project-drawer" aria-label="Prosjekter">
+      <div id="projectDrawerPanel" class="drawer-panel" aria-hidden="true" inert>
+        <header class="drawer-head">
+          <strong>Prosjekter</strong>
+          <span id="projectCount" class="drawer-count"></span>
+          <button id="projectDrawerClose" class="drawer-button" type="button" aria-label="Skyv prosjektvinduet inn">‹</button>
+        </header>
+        <input id="projectSearch" class="drawer-search" type="search" placeholder="Søk i prosjekter" autocomplete="off" spellcheck="false" aria-label="Søk i prosjekter">
+        <div id="projectList" class="drawer-list" role="listbox" aria-label="Prosjekter etter siste aktivitet"></div>
+      </div>
+      <div id="projectDrawerHandle" class="drawer-handle" role="toolbar" aria-label="Skinne">
+        <button id="railToggle" class="rail-toggle" type="button" aria-label="Åpne eller lukk prosjektvinduet" aria-expanded="false" aria-controls="projectDrawerPanel"><span class="drawer-handle-arrow" aria-hidden="true">›</span></button>
+        <button id="railAgent" class="rail-item rail-icon" type="button" data-rail="agent" aria-label="Valgt agent" hidden></button>
+        <button id="railRunButton" class="rail-item" type="button" data-rail="run" aria-label="Kjørende agenter"><span id="railRun" class="rail-dot"></span></button>
+        <button id="railValidatorButton" class="rail-item rail-validator" type="button" role="switch" aria-checked="false" aria-label="Slå valideringsagenten på eller av"><span class="rail-validator-mark" aria-hidden="true">V</span><span id="railValidatorDot" class="rail-validator-dot" aria-hidden="true"></span></button>
+        <button id="railKnowledgeButton" class="rail-item" type="button" aria-label="Kunnskapsutkast" aria-expanded="false" aria-controls="knowledgeDialog">K</button>
+        <button id="railEvaluationsButton" class="rail-item" type="button" aria-label="Funn og avklaringer" aria-expanded="false" aria-controls="evaluationDialog">≡</button>
+        <button id="railSettingsButton" class="rail-item" type="button" aria-label="Brytere for hva appen gjør og viser" aria-expanded="false" aria-controls="settingsPanel">⌥<span id="railSettingsDot" class="rail-settings-dot" aria-hidden="true" hidden></span></button>
+        <button id="railProjectButton" class="rail-item rail-label-clip" type="button" data-rail="project" aria-label="Valgt prosjekt"><span id="railLabelClip" class="rail-label-inner"><span id="projectDrawerLabel" class="drawer-handle-label">Prosjekt</span></span></button>
+        <span id="railQuotas" class="rail-quotas"></span>
+        <button id="railEngineButton" class="rail-item" type="button" data-rail="engine" aria-label="Motorstatus"><span id="railEngine" class="rail-dot engine"></span></button>
+      </div>
+    </aside>
+
+  <main class="stage" id="stage">
+    <header id="topBar" class="top-bar" aria-label="Prosjekt, oppsett og status">
+      <button id="projectContextButton" class="bar-chip bar-project" type="button">
+        <span class="bar-label">Prosjekt</span>
+        <strong id="projectContextName">Velg prosjekt</strong>
+      </button>
+      <button id="activeMemoryButton" class="bar-chip bar-memory" type="button" aria-label="Åpne eller lukk aktivt prosjektminne" disabled>Minne</button>
+      <div id="setupBar" class="bar-setup" role="group" aria-label="Oppsett"></div>
+      <input id="intentInput" class="bar-wish" type="text" autocomplete="off" spellcheck="false" placeholder="Velg prosjekt" aria-label="Beskriv ønsket oppsett">
+      <div id="barInfo" class="bar-info" role="status" hidden>
+        <span id="barInfoText" class="bar-info-text"></span>
+        <span id="barInfoActions" class="bar-info-actions"></span>
+        <button id="barInfoClose" class="bar-chip bar-close" type="button" aria-label="Lukk informasjonen">×</button>
+      </div>
+    </header>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <div id="canvasFocusBadge" class="canvas-focus-badge" role="status" aria-live="polite" aria-atomic="true" aria-keyshortcuts="Alt+Q Alt+Shift+Q">Visning: Alle</div>
+      <section id="canvas" class="canvas" aria-label="Utskrift" tabindex="0">
+        <div id="canvasStream" class="canvas-stream" aria-live="polite"></div>
+        <p id="canvasEmpty" class="canvas-empty">Velg et prosjekt først. Deretter kan AgentSync anbefale agent, modell og nivå.</p>
+      </section>
+
+      <button id="canvasJump" class="canvas-jump" type="button" hidden>Ny tekst ↓</button>
+
+      <div class="canvas-corner" role="toolbar" aria-label="Verktøy">
+        <div class="zoom-control" role="group" aria-label="Tekststørrelse">
+          <button id="zoomOut" class="corner-button zoom-button" type="button" aria-label="Mindre tekst">−</button>
+          <button id="zoomReset" class="corner-button zoom-value" type="button" aria-label="Tilbakestill tekststørrelsen til 100 prosent"><span id="zoomValue">100%</span></button>
+          <button id="zoomIn" class="corner-button zoom-button" type="button" aria-label="Større tekst">+</button>
+        </div>
+        <button id="themeToggle" class="corner-button" type="button" aria-label="Bytt tema">◐</button>
+      </div>
+    </div>
+
+    <div id="scopeStrip" class="scope-strip" role="group" aria-label="Velg hvor langt agenten skal gå" hidden>
+      <span id="scopeStripText" class="scope-strip-text"></span>
+      <div id="scopeStripActions" class="scope-strip-actions"></div>
+    </div>
+    <div class="instruction-wrap">
+      <textarea id="instructionInput" class="instruction" rows="8" placeholder="Velg prosjekt før du skriver oppdrag" aria-label="Oppdrag til valgt agent" disabled></textarea>
+      <button id="missionStartButton" class="mission-start" type="button" disabled>Kjør</button>
+    </div>
+
+    <!-- Every switch for what the app does and shows. Turning a master off
+         never writes to its children: the lookup walks up the chain, so a
+         child comes back exactly as it was when the master returns. -->
+    <section id="settingsPanel" class="settings-panel" aria-label="Brytere" hidden>
+      <header class="settings-panel-bar">
+        <span class="settings-panel-title">Brytere</span>
+        <span id="settingsChanged" class="settings-changed"></span>
+        <button id="settingsReset" class="settings-button" type="button">Nullstill</button>
+        <button id="settingsClose" class="settings-button" type="button" aria-label="Lukk bryterne">×</button>
+      </header>
+      <div id="settingsBody" class="settings-body"></div>
+    </section>
+
+    <!-- The validation panel floats inside AgentSync Max and wears its frame,
+         not the operating system's. Dragged by its own bar, kept inside the
+         stage, remembered where it was left. -->
+    <section id="controlPanel" class="control-panel" aria-label="Valideringsagent" hidden>
+      <header id="controlPanelBar" class="control-panel-bar">
+        <span class="control-panel-mark" aria-hidden="true">V</span>
+        <span class="control-panel-title">Valideringsagent</span>
+        <span id="controlProject" class="control-panel-project">Velg prosjekt i hovedvinduet</span>
+        <span id="controlLiveBadge" class="control-pin">av</span>
+        <button id="controlPanelMove" class="control-panel-button control-panel-move" type="button" aria-label="Flytt valideringspanelet">
+          <svg class="control-panel-move-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 2v20M2 12h20M12 2 9 5m3-3 3 3m-3 17-3-3m3 3 3-3M2 12l3-3m-3 3 3 3m17-3-3-3m3 3-3 3" />
+          </svg>
+        </button>
+        <button id="controlPanelMinimize" class="control-panel-button" type="button" aria-label="Minimer til tittellinjen" aria-controls="controlPanel" aria-expanded="true">
+          <span class="control-panel-minimize-icon" aria-hidden="true">−</span>
+          <span class="control-panel-expand-icon" aria-hidden="true">+</span>
+        </button>
+        <button id="controlPanelClose" class="control-panel-button" type="button" aria-label="Lukk valideringspanelet">×</button>
+      </header>
+
+      <div class="control-panel-body">
+        <section class="control-live" aria-live="polite">
+          <span class="control-live-dot" aria-hidden="true"></span>
+          <span id="controlLiveText">Klar. Validerer etter neste fullførte skriveoppdrag som endrer filer.</span>
+        </section>
+
+        <section class="control-section">
+          <div class="control-label">Valideringsoppsett</div>
+          <div id="controlWriter" class="control-muted"></div>
+          <div id="controlAgents" class="control-agents" role="radiogroup" aria-label="Agent"></div>
+          <div class="control-row">
+            <select id="controlModel" class="control-select" aria-label="Modell"></select>
+            <select id="controlLevel" class="control-select" aria-label="Nivå">
+              <option value="">Standard</option>
+              <option value="normal">Normal</option>
+              <option value="max">Max</option>
+              <option value="ultra">Ultra</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="control-section">
+          <div class="control-label">Manuell kontroll</div>
+          <div id="controlPresets" class="control-presets"></div>
+          <textarea id="controlPrompt" class="control-prompt" rows="3" placeholder="Et nøytralt spørsmål. Ikke fortell agenten hva de andre fant."></textarea>
+        </section>
+
+        <section class="control-section">
+          <label class="control-toggle">
+            <input id="controlBlind" type="checkbox" checked>
+            <span><b>Blind.</b> Automatiske valideringer bruker alltid en midlertidig kopi uten <code>.agent-state</code>, <code>.git</code>, lokal agenthistorikk og vanlige hemmelighetsfiler. Bryteren gjelder manuelle kontroller. Dette skjermer konteksten, men er ikke en egen sikkerhetssandkasse i Windows.</span>
+          </label>
+        </section>
+
+        <div class="control-actions">
+          <button id="controlRun" class="control-run" type="button" disabled>Kontroller nå</button>
+          <span id="controlStatus" class="control-status" role="status"></span>
+        </div>
+
+        <section class="control-section control-runs">
+          <div class="control-runs-heading">
+            <div>
+              <div class="control-label">Valideringer i dette prosjektet</div>
+              <div class="control-runs-hint">Velg en kontroll. Resultatet åpnes her, uten at du mister plassen.</div>
+            </div>
+            <button id="controlEvaluationsButton" class="evaluation-button" type="button">Funn og avklaringer</button>
+          </div>
+          <div id="controlBrowser" class="control-browser">
+            <div id="controlRunPane" class="control-run-pane">
+              <div id="controlList" class="control-list" aria-live="polite" aria-label="Valideringer"></div>
+            </div>
+            <section id="controlDetail" class="control-detail" aria-label="Valgt validering" hidden>
+              <header class="control-detail-head">
+                <button id="controlDetailBack" class="control-detail-back" type="button">← Alle valideringer</button>
+                <div id="controlDetailTitle" class="control-detail-title"></div>
+                <div id="controlDetailMeta" class="control-detail-meta"></div>
+              </header>
+              <div id="controlDetailScroll" class="control-detail-scroll">
+                <div id="controlVerdict" class="control-verdict" role="status" hidden></div>
+                <div id="controlFindingList" class="control-finding-list"></div>
+                <details id="controlRawDetails" class="control-raw-details">
+                  <summary id="controlRawSummary">Hele agentrapporten</summary>
+                  <pre id="controlFindings" class="control-findings" hidden></pre>
+                </details>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+  </div>
+  <!-- control.js first: it publishes window.AgentSyncControl inside its own
+       closure, which app.js opens and closes the validation panel with. -->
+  <script src="settings.js"></script>
+  <script src="mission-status.js"></script>
+  <script src="control.js"></script>
+  <script src="evaluation.js"></script>
+  <script src="wiki-review.js"></script>
+  <script src="external-watch.js"></script>
+  <script src="active-memory.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

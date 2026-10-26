@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<title>Aktørfarger</title>
+<link rel="stylesheet" href="/styles.css">
+<style>
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); font: 13px/1.5 system-ui, sans-serif; }
+  .stage { max-width: 720px; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 4px; }
+  .note { color: var(--muted); font-size: 11.5px; margin: 0 0 18px; }
+  .entry { margin-bottom: 10px; }
+  .entry-head { display: flex; gap: 8px; align-items: baseline; font-size: 11px; color: var(--muted); }
+  .entry-body { margin: 2px 0 0; font-size: 12.5px; white-space: pre-wrap; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .sw { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .sw i { width: 3px; height: 22px; border-radius: 2px; display: block; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <h1>Aktørlaget mellom skillestreken og teksten</h1>
+  <p class="note">Ytterst: skillestreken som før, blå for deg og cyan for agentene. Innenfor: aktørfargen. Deretter teksten.</p>
+
+  <article class="entry entry-user"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:02</span><b>Du → Claude Code</b></div>
+    <pre class="entry-body">kan du se raskt på hoveddelen i koden?</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="claude"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:02</span><b>Claude Code</b></div>
+    <pre class="entry-body">Leste gjennom hoveddelen og fant tre steder verdt å se på.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="codex"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:11</span><b>Codex</b></div>
+    <pre class="entry-body">Kontrollen fant to funn i src/app.js.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="antigravity"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:19</span><b>Antigravity</b></div>
+    <pre class="entry-body">Endret ingenting; spørsmålet var allerede besvart.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="opencode"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:24</span><b>OpenCode</b></div>
+    <pre class="entry-body">La til en test som fanger regresjonen.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="cline"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:31</span><b>Cline</b></div>
+    <pre class="entry-body">Forbindelsen falt. Ingen endring gjort.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="aider"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:38</span><b>Aider</b></div>
+    <pre class="entry-body">Rettet formateringen i to filer.</pre>
+  </article>
+
+  <article class="entry entry-agent" data-agent="opencode"><span class="entry-actor"></span>
+    <div class="entry-head"><span>14:52</span><b>OpenCode</b></div>
+    <pre class="entry-body">Linje 1 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 2 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 3 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 4 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 5 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 6 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 7 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 8 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.
+Linje 9 av en lengre utskrift fra agenten, slik de faktisk ser ut i lerretet.</pre>
+  </article>
+
+  <div class="swatches">
+    <span class="sw"><i style="background:var(--actor-user)"></i>Du</span>
+    <span class="sw"><i style="background:var(--actor-claude)"></i>Claude</span>
+    <span class="sw"><i style="background:var(--actor-codex)"></i>Codex</span>
+    <span class="sw"><i style="background:var(--actor-antigravity)"></i>Antigravity</span>
+    <span class="sw"><i style="background:var(--actor-opencode)"></i>OpenCode</span>
+    <span class="sw"><i style="background:var(--actor-cline)"></i>Cline</span>
+    <span class="sw"><i style="background:var(--actor-aider)"></i>Aider</span>
+  </div>
+
+  <div class="finding-peek" style="position: static; margin-top: 24px; width: 320px;">
+    <div class="finding-peek-head">Hvem</div>
+    <pre class="finding-peek-body">Claude Code · claude-fable-5-1 · skriveoppdrag</pre>
+  </div>
+</div>
+</body>
+</html>

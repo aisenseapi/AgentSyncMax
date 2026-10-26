@@ -1,0 +1,41 @@
+# Native history and private runtime data
+.agent-state/
+logs/
+missions/
+evaluations/
+checkpoints/
+history/
+project-index/
+config.local.json
+validator-perioder.json
+.aider*
+
+# Generated reports, including transport conflict copies
+AgentSync-Status*.html
+AgentSync-Status*.json
+AgentSync-Recovery*.html
+AgentSync-Recovery*.json
+AgentSync-Intelligence*.html
+AgentSync-Intelligence*.json
+
+# Build output and local tools
+target/
+node_modules/
+desktop/dist/
+desktop/src-tauri/gen/
+testResults.xml
+*.tmp
+*.log
+*.bak
+backup/
+inspiration/
+
+# Local credentials and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+auth.json

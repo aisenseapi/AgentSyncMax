@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>AgentSync Max · klassisk visning</title>
+  <link rel="stylesheet" href="classic.css">
+</head>
+<body>
+  <div class="desktop-layout">
+    <aside id="projectSidebar" class="project-sidebar" aria-label="Prosjektnavigator">
+      <div class="project-sidebar-head">
+        <span class="project-sidebar-mark" aria-hidden="true">AS</span>
+        <div class="project-sidebar-title">
+          <strong>AgentSync</strong>
+          <span>Prosjekter</span>
+        </div>
+        <button id="projectSidebarToggle" class="project-sidebar-toggle" type="button" aria-label="Skjul prosjektnavigatoren" aria-expanded="true" title="Skjul prosjektnavigatoren">‹</button>
+      </div>
+
+      <nav class="project-sidebar-actions" aria-label="Prosjekthandlinger">
+        <button id="sidebarNewMission" class="project-sidebar-action primary" type="button"><span aria-hidden="true">+</span><strong>Nytt oppdrag</strong></button>
+        <button id="sidebarProjectOverview" class="project-sidebar-action" type="button"><span aria-hidden="true">≡</span><strong>Prosjektoversikt</strong></button>
+      </nav>
+
+      <label class="project-sidebar-search">
+        <span class="sr-only">Søk i prosjekter</span>
+        <span aria-hidden="true">⌕</span>
+        <input id="projectSidebarSearch" type="search" autocomplete="off" placeholder="Søk i prosjekter">
+      </label>
+
+      <div id="projectSidebarList" class="project-sidebar-list" role="listbox" aria-label="Prosjekter etter siste aktivitet">
+        <p class="project-sidebar-empty">Leser AgentSync-prosjekter...</p>
+      </div>
+      <div class="project-sidebar-foot"><span id="projectSidebarCount">0 prosjekter</span><span id="projectSidebarFreshness">Ikke oppdatert</span></div>
+      <div id="projectSidebarResizer" class="project-sidebar-resizer" role="separator" aria-orientation="vertical" aria-label="Endre bredden på prosjektnavigatoren" title="Dra for å endre bredde · dobbeltklikk for standard"></div>
+    </aside>
+
+    <div class="app-shell">
+    <header class="app-header">
+      <div class="identity">
+        <div class="app-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <p class="eyebrow">Kontinuitet på tvers av agenter</p>
+          <h1>AgentSync <span>Max · klassisk</span></h1>
+          <p id="homePath" class="home-path">Kobler til AgentSync...</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="ux-controls" aria-label="Visningsvalg">
+          <a class="ux-button classic-v4-link" href="index.html" title="Tilbake til v4-visningen">v4</a>
+          <button id="themeToggle" class="ux-button" type="button" aria-label="Bytt til lyst tema" title="Bytt mellom natt og dag"><span id="themeIcon" aria-hidden="true">☀</span></button>
+          <div class="font-controls" role="group" aria-label="Tekststørrelse">
+            <button id="fontDecrease" class="ux-button font-button" type="button" aria-label="Zoom ut">A−</button>
+            <output id="fontSizeValue" aria-live="polite">100%</output>
+            <button id="fontIncrease" class="ux-button font-button" type="button" aria-label="Zoom inn">A+</button>
+          </div>
+        </div>
+        <div id="servicePill" class="service-pill loading"><i></i><span>Leser status</span></div>
+        <button id="refreshButton" class="button secondary" type="button">Oppdater</button>
+        <button id="startButton" class="button primary" type="button">Start AgentSync</button>
+      </div>
+    </header>
+
+    <nav class="view-tabs" aria-label="AgentSync-visninger">
+      <button class="view-tab active" type="button" data-view="mission"><span>Mission</span><small>Ett oppdrag, kontrollert arbeid</small></button>
+      <button class="view-tab" type="button" data-view="status"><span>Status</span><small>Hva finnes</small></button>
+      <button class="view-tab" type="button" data-view="recovery"><span>Recovery</span><small>Kan det gjenopprettes</small></button>
+      <button class="view-tab" type="button" data-view="intelligence"><span>Intelligence</span><small>Hvordan henger det sammen</small></button>
+    </nav>
+
+    <main>
+      <section id="engineNotice" class="engine-notice" hidden aria-live="assertive">
+        <span class="engine-notice-mark" aria-hidden="true">!</span>
+        <div class="engine-notice-copy">
+          <strong id="engineNoticeTitle">AgentSync-motoren ble startet automatisk</strong>
+          <p id="engineNoticeText"></p>
+          <small id="engineNoticeTime"></small>
+        </div>
+        <button id="engineNoticeClose" type="button" aria-label="Lukk meldingen">×</button>
+      </section>
+      <section id="messageArea" class="message-area" hidden></section>
+
+      <section id="missionView" class="view active" aria-labelledby="missionHeading">
+        <div class="section-heading">
+          <div><p class="kicker">Kontrollert agentarbeid</p><h2 id="missionHeading">Mission Control</h2></div>
+          <span id="missionState" class="state-chip neutral">Klar for oppdrag</span>
+        </div>
+
+        <div class="mission-grid">
+          <section class="panel mission-composer">
+            <div class="panel-heading">
+              <div><p class="kicker">Én intensjon</p><h3>Start et skrivende oppdrag</h3></div>
+              <span class="mission-safety">Git eller AgentSync-checkpoint</span>
+            </div>
+
+            <label class="field-label" for="missionProject">Prosjektmappe</label>
+            <div class="mission-project-row">
+              <div class="mission-project-field">
+                <input id="missionProject" class="field-input" type="text" autocomplete="off" aria-autocomplete="list" aria-controls="missionProjectPicker" aria-expanded="false" placeholder="P:\Dropbox\Prosjekt">
+                <div id="missionProjectPicker" class="mission-project-picker" role="listbox" aria-label="AgentSync-prosjekter" hidden></div>
+              </div>
+              <button id="missionInspectButton" class="button secondary" type="button">Kontroller prosjekt</button>
+            </div>
+            <div id="missionWorkspace" class="mission-workspace neutral">Velg et prosjekt fra AgentSync eller skriv inn en eksakt mappe.</div>
+
+            <div class="field-label-row conversation-label">
+              <span class="field-label">Samtale</span>
+              <div id="conversationFilters" class="conversation-filters" role="group" aria-label="Filtrer samtalen på agent"></div>
+            </div>
+            <div id="conversationTimeline" class="conversation-timeline" aria-live="polite">
+              <div class="empty-state">Velg et prosjekt for å se samtalen.</div>
+            </div>
+
+            <div class="field-label-row mission-prompt-label">
+              <label class="field-label" for="missionPrompt">Oppdrag</label>
+              <button id="missionHistoryButton" class="mission-history-toggle" type="button" aria-expanded="false" aria-controls="missionPromptHistory" disabled>Historikk 0</button>
+            </div>
+            <div class="mission-prompt-field">
+              <textarea id="missionPrompt" class="mission-prompt" maxlength="20000" placeholder="Beskriv hva som skal bygges, rettes eller undersøkes..."></textarea>
+              <div id="missionPromptHistory" class="mission-prompt-history" role="listbox" aria-label="Tidligere oppdrag" hidden></div>
+            </div>
+
+            <div class="field-label-row">
+              <span class="field-label">Skrivende agent</span>
+              <small>Én agent om gangen per prosjekt. Flere kan tvinges i parallell, og andre prosjekter er uavhengige.</small>
+            </div>
+            <div id="missionAgents" class="mission-agents"><div class="empty-state">Oppdager lokale agent-CLI-er...</div></div>
+
+            <div class="mission-tuning">
+              <div class="mission-tuning-field">
+                <label class="field-label" for="missionModel">Modell</label>
+                <input id="missionModel" class="field-input" type="text" list="missionModelOptions" placeholder="Agentens standard" autocomplete="off">
+                <datalist id="missionModelOptions"></datalist>
+              </div>
+              <div class="mission-tuning-field">
+                <label class="field-label" for="missionLevel">Nivå</label>
+                <select id="missionLevel" class="field-input">
+                  <option value="">Standard</option>
+                  <option value="normal">Normal</option>
+                  <option value="max">Max</option>
+                  <option value="ultra">Ultra</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mission-guardrail">
+              <strong>Lett kontroll uten Git-tvang</strong>
+              <span>Rent Git bruker commit-baseline. Eksisterende endringer og mapper uten Git får et AgentSync-checkpoint før agenten skriver.</span>
+            </div>
+            <div id="missionForceBanner" class="mission-force-banner" hidden>
+              <span id="missionForceText"></span>
+              <div class="mission-force-actions">
+                <button id="missionForceConfirm" class="button danger" type="button">Tving parallell kjøring</button>
+                <button id="missionForceDismiss" class="button secondary" type="button">Avbryt</button>
+              </div>
+            </div>
+            <div class="mission-actions">
+              <button id="missionStartButton" class="button primary" type="button" disabled>Start oppdrag</button>
+              <button id="missionCancelButton" class="button danger" type="button" hidden>Avbryt</button>
+            </div>
+          </section>
+
+          <section class="panel mission-runtime">
+            <div class="panel-heading">
+              <div><p class="kicker">Levende agentløp</p><h3 id="missionRuntimeTitle">Ingen aktivt oppdrag</h3></div>
+              <span id="missionAgentBadge" class="state-chip neutral">Venter</span>
+            </div>
+            <dl id="missionMeta" class="mission-meta">
+              <dt>Fase</dt><dd>Velg prosjekt, agent og oppdrag.</dd>
+              <dt>Startet</dt><dd>Ikke startet</dd>
+            </dl>
+            <section id="missionFinalPanel" class="mission-final" hidden>
+              <div class="mission-stream-heading">
+                <div><p class="kicker mission-response-label">Agentens tekst <span id="missionFinalModel" class="mission-inline-model"></span><span id="missionFinalSpinner" class="agent-working-spinner" role="status" aria-label="Agenten arbeider" hidden></span></p><h4 id="missionFinalHeading">Sluttresultat</h4></div>
+                <span id="missionFinalState" class="state-chip neutral">Venter</span>
+              </div>
+              <pre id="missionFinalOutput" class="mission-final-output"></pre>
+            </section>
+            <div class="mission-stream-heading activity-heading">
+              <div><p class="kicker">Verktøy og steg</p><h4>Aktivitetslogg</h4></div>
+              <span id="missionActivityState" class="live-indicator stopped"><i></i>Venter</span>
+            </div>
+            <pre id="missionOutput" class="mission-output">Agentens verktøybruk og arbeidssteg vises her.</pre>
+            <pre id="missionErrors" class="mission-errors" hidden></pre>
+          </section>
+        </div>
+
+        <section class="panel mission-diff-panel">
+          <div class="panel-heading diff-heading">
+            <div>
+              <p class="kicker">Etterprøvbart resultat</p>
+              <h3>Endringer fra oppdraget</h3>
+            </div>
+            <div class="diff-tools">
+              <div class="spark-review-group">
+                <select id="sparkModelSelect" class="compact-select spark-model-select" title="Velg lokal modell på DGX Spark" aria-label="Velg Spark-modell"></select>
+                <button id="runCodeReviewButton" class="button spark-button" type="button" title="Gjennomfør sikkerhets- og kvalitetskontroll med valgt lokal modell på DGX Spark">
+                  <span class="spark-icon" aria-hidden="true">⚡</span><span>Spark Code Review</span>
+                </button>
+              </div>
+              <div class="diff-view-toggle" role="group" aria-label="Diff-visning">
+                <button id="diffViewUnified" class="diff-toggle-btn active" type="button" title="Vis som samlet diff">Samlet</button>
+                <button id="diffViewSplit" class="diff-toggle-btn" type="button" title="Vis side-ved-side">Split</button>
+              </div>
+              <span id="missionDiffSummary" class="generated">Ingen endringer ennå</span>
+            </div>
+          </div>
+
+          <section id="codeReviewPanel" class="code-review-panel" hidden>
+            <div class="review-head">
+              <div class="review-meta-left">
+                <span class="spark-badge">NVIDIA DGX Spark · lokal</span>
+                <span id="codeReviewModel" class="model-badge">qwen3-coder-next:q8_0</span>
+                <span id="codeReviewTime" class="time-badge"></span>
+              </div>
+              <span id="codeReviewBadge" class="state-chip neutral">Venter</span>
+            </div>
+            <div id="codeReviewContent" class="code-review-content markdown-output"></div>
+          </section>
+
+          <div id="diffFileList" class="diff-file-list" hidden></div>
+          <div id="missionDiffContainer" class="mission-diff-container">
+            <pre id="missionDiff" class="mission-diff">Diffen vises når agenten har skrevet noe.</pre>
+            <div id="missionDiffRendered" class="mission-diff-rendered" hidden></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="statusView" class="view" aria-labelledby="statusHeading">
+        <div class="section-heading">
+          <div><p class="kicker">Levende oversikt</p><h2 id="statusHeading">Agentprosjekter</h2></div>
+          <p id="statusGenerated" class="generated">Venter på første status...</p>
+        </div>
+        <div id="statusCards" class="metric-grid skeleton-grid"></div>
+
+        <section class="panel audit-panel">
+          <div class="panel-heading">
+            <div><p class="kicker">Fast selvkontroll</p><h3>Agentene mot rapporten</h3></div>
+            <span id="auditSummary" class="state-chip neutral">Ikke lest</span>
+          </div>
+          <div id="auditGrid" class="audit-grid empty-state">Statuskontrakten bygges...</div>
+        </section>
+
+        <section class="panel projects-panel">
+          <div class="panel-heading project-tools">
+            <div><p class="kicker">Eksakte arbeidsmapper</p><h3>Prosjekter oppdaget av agentene</h3></div>
+            <label class="search"><span aria-hidden="true">⌕</span><span class="sr-only">Søk i agentprosjekter</span><input id="projectSearch" type="search" aria-label="Søk i agentprosjekter" placeholder="Søk etter prosjekt, mappe eller maskin"></label>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Prosjektmappe</th><th>Agentene</th><th>Sesjoner</th><th>State-filer</th><th>Størrelse</th><th>Siste data</th><th>Maskiner</th></tr></thead>
+              <tbody id="projectRows"><tr><td colspan="7" class="empty-cell">Venter på AgentSync-Status.json...</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="recoveryView" class="view" aria-labelledby="recoveryHeading">
+        <div class="section-heading">
+          <div><p class="kicker">Bevaringskontroll</p><h2 id="recoveryHeading">Recovery</h2></div>
+          <div class="section-actions"><button id="recoveryButton" class="button secondary" type="button">Kjør kontroll</button><button id="deepRecoveryButton" class="button secondary" type="button">Kjør dyp kontroll</button></div>
+        </div>
+        <div class="context-strip">
+          <div><strong>Vanlig kontroll</strong><span>Sjekker at prosjektkoblinger og recovery-grunnlag kan leses.</span></div>
+          <div><strong>Dyp kontroll</strong><span>Leser alle registrerte filer og lager et samlet integritetsavtrykk. Tar lengre tid.</span></div>
+        </div>
+        <div id="recoveryFreshness" class="freshness-notice" hidden></div>
+        <div id="recoveryCards" class="metric-grid"></div>
+        <section class="panel">
+          <div class="panel-heading project-tools"><div><p class="kicker">Gjenopprettbarhet</p><h3>Prosjektstatus</h3></div><div class="table-controls"><label class="search"><span aria-hidden="true">⌕</span><input id="recoverySearch" type="search" aria-label="Søk i Recovery-prosjekter" placeholder="Søk i Recovery"></label><select id="recoveryFilter" class="compact-select" aria-label="Filtrer Recovery-status"><option value="all">Alle statuser</option><option value="attention">Bare oppmerksomhet</option><option value="ready">Bare klare</option></select><span id="recoveryGenerated" class="generated"></span></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Prosjekt</th><th>Status</th><th>Agenter</th><th>Sesjoner</th><th>Størrelse</th><th>Funn</th></tr></thead><tbody id="recoveryRows"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="intelligenceView" class="view" aria-labelledby="intelligenceHeading">
+        <div class="section-heading">
+          <div><p class="kicker">Avledet metadata</p><h2 id="intelligenceHeading">Intelligence</h2></div>
+          <p id="intelligenceGenerated" class="generated"></p>
+        </div>
+        <div class="context-strip intelligence-guide">
+          <div><strong>Delte stier</strong><span>Filstier som finnes i metadata fra flere agentøkter. Samtaleinnhold vises ikke.</span></div>
+          <div><strong>Agentflyt</strong><span>Rekkefølgen ulike agenter har vært aktive i samme prosjekt, ikke direkte meldinger mellom dem.</span></div>
+        </div>
+        <div id="intelligenceCards" class="metric-grid"></div>
+        <div class="intelligence-columns">
+          <section class="panel"><div class="panel-heading"><div><p class="kicker">Modellbruk</p><h3>Registrerte modeller</h3></div></div><div id="modelList" class="rank-list"></div></section>
+          <section class="panel"><div class="panel-heading"><div><p class="kicker">Krysskoblinger</p><h3>Agentflyt</h3></div></div><div id="flowList" class="flow-list"></div></section>
+        </div>
+        <section class="panel"><div class="panel-heading project-tools"><div><p class="kicker">Sist registrert</p><h3>Agentøkter</h3></div><div class="table-controls"><label class="search"><span aria-hidden="true">⌕</span><input id="intelligenceSearch" type="search" aria-label="Søk i agentøkter" placeholder="Søk i agentøkter"></label><select id="intelligenceAgentFilter" class="compact-select" aria-label="Filtrer på agent"><option value="all">Alle agenter</option></select><label class="toggle-control"><input id="intelligenceTechnical" type="checkbox"><span>Vis tekniske økter</span></label><span id="intelligenceResultCount" class="generated"></span></div></div><div class="table-wrap"><table><thead><tr><th>Prosjekt</th><th>Agent</th><th>Modell</th><th>Emne</th><th>Stier</th><th>Sist aktiv</th></tr></thead><tbody id="sessionRows"></tbody></table></div><div class="table-more"><button id="intelligenceMore" class="button secondary" type="button" hidden>Vis flere</button></div></section>
+      </section>
+    </main>
+
+    <footer>
+      <span>AgentSync Max · klassisk visning</span>
+      <span id="footerMachine">Lokal kontrollflate</span>
+      <button id="folderButton" type="button">Åpne AgentSync-mappen</button>
+    </footer>
+    </div>
+  </div>
+
+  <section id="missionFocusLayer" class="mission-focus-layer" role="dialog" aria-modal="false" aria-labelledby="missionFocusTitle" tabindex="-1" hidden>
+    <header class="mission-focus-header">
+      <div class="mission-focus-identity">
+        <span id="missionFocusAgent" class="agent-tag aider"><span class="agent-mark">ai</span>Aider</span>
+        <div>
+          <p id="missionFocusProject" class="mission-focus-project"></p>
+          <p id="missionFocusModel" class="mission-focus-model"></p>
+        </div>
+      </div>
+      <div class="mission-focus-actions">
+        <span id="missionFocusHistoryState" class="state-chip warn" hidden>Historisk oppdrag</span>
+        <button id="missionFocusActiveSession" class="button primary" type="button" hidden>Åpne aktivt oppdrag</button>
+        <span id="missionFocusStatus" class="state-chip neutral">Venter</span>
+        <button id="missionFocusCancel" class="button danger" type="button" hidden>Avbryt</button>
+        <button id="missionFocusOverview" class="button secondary" type="button">Til oversikten</button>
+      </div>
+    </header>
+    <main id="missionFocusScroller" class="mission-focus-scroller">
+      <article class="mission-focus-conversation">
+        <div class="mission-focus-prompt-wrap">
+          <p>Oppdrag</p>
+          <pre id="missionFocusPrompt" class="mission-focus-prompt"></pre>
+        </div>
+        <p id="missionFocusTaskSummary" class="mission-focus-task-summary" hidden></p>
+        <div class="mission-focus-elapsed"><span id="missionFocusElapsed">Ikke startet</span><i></i></div>
+        <section class="mission-focus-response" aria-live="polite">
+          <div class="mission-focus-response-head">
+            <div><p class="kicker mission-response-label">Agentens tekst <span id="missionFocusResponseModel" class="mission-inline-model"></span><span id="missionFocusSpinner" class="agent-working-spinner" role="status" aria-label="Agenten arbeider" hidden></span></p><h2 id="missionFocusTitle">Arbeidsøkt</h2></div>
+            <span id="missionFocusPhase" class="generated"></span>
+          </div>
+          <div id="missionFocusOutcome" class="mission-outcome" hidden><strong id="missionFocusOutcomeTitle"></strong><p id="missionFocusOutcomeText"></p></div>
+          <div id="missionFocusText" class="mission-focus-text markdown-output"></div>
+          <details id="missionFocusErrorPanel" class="mission-focus-details mission-error-details" hidden><summary><span>Tekniske feildetaljer</span><small>Nyeste først · rå agenttekst</small></summary><pre id="missionFocusErrors" class="mission-focus-errors"></pre></details>
+        </section>
+        <details id="missionFocusActivityPanel" class="mission-focus-details">
+          <summary><span>Aktivitetslogg</span><small id="missionFocusActivitySummary">Verktøy og arbeidssteg</small></summary>
+          <pre id="missionFocusActivity" class="mission-focus-activity"></pre>
+        </details>
+        <details id="missionFocusChangesPanel" class="mission-focus-details mission-focus-changes">
+          <summary><span id="missionFocusChangesTitle">Ingen endringer ennå</span><small id="missionFocusChangesAction">Ingen diff</small></summary>
+          <div id="missionFocusDiffToolbar" class="focus-diff-toolbar" hidden>
+            <button id="missionFocusReviewButton" class="button spark-button compact" type="button"><span class="spark-icon" aria-hidden="true">⚡</span><span>Kjør lokal Code Review</span></button>
+            <div id="missionFocusFileList" class="diff-file-list compact" hidden></div>
+          </div>
+          <section id="missionFocusReviewPanel" class="code-review-panel compact" hidden>
+            <div class="review-head">
+              <div class="review-meta-left">
+                <span class="spark-badge">NVIDIA DGX Spark · lokal</span>
+                <span id="missionFocusReviewModel" class="model-badge">qwen3-coder-next:q8_0</span>
+              </div>
+              <span id="missionFocusReviewBadge" class="state-chip neutral">Venter</span>
+            </div>
+            <div id="missionFocusReviewContent" class="code-review-content markdown-output"></div>
+          </section>
+          <pre id="missionFocusDiff" class="mission-focus-diff"></pre>
+          <div id="missionFocusDiffRendered" class="mission-diff-rendered" hidden></div>
+        </details>
+        <div id="missionFocusResultActions" class="mission-result-actions" hidden>
+          <button id="missionFocusOpenProject" class="button secondary" type="button">Åpne prosjektmappe</button>
+          <button id="missionFocusFollowUp" class="button primary" type="button">Nytt oppdrag her</button>
+        </div>
+      </article>
+    </main>
+  </section>
+
+  <nav id="missionSessionDock" class="mission-session-dock" aria-label="Lagrede oppdrag" hidden>
+    <button id="missionSessionDashboard" class="mission-dock-dashboard active" type="button" aria-pressed="true">
+      <span class="mission-dock-icon" aria-hidden="true">⌂</span><span>Oversikt</span>
+    </button>
+    <div class="mission-dock-heading"><strong>Oppdrag</strong><small id="missionSessionCount">0</small></div>
+    <div id="missionSessionTabs" class="mission-session-tabs" aria-label="Nylige oppdrag"></div>
+    <button id="missionSessionAll" class="mission-dock-all" type="button" aria-haspopup="dialog" aria-expanded="false"><strong>Alle</strong><small id="missionSessionAllCount">0</small></button>
+  </nav>
+
+  <section id="missionArchive" class="mission-archive" role="dialog" aria-modal="true" aria-labelledby="missionArchiveTitle" tabindex="-1" hidden>
+    <header><div><p class="kicker">Historikk</p><h2 id="missionArchiveTitle">Alle oppdrag</h2></div><button id="missionArchiveClose" class="detail-close" type="button" aria-label="Lukk oppdragshistorikk">×</button></header>
+    <label class="search mission-archive-search"><span aria-hidden="true">⌕</span><input id="missionArchiveSearch" type="search" aria-label="Søk i oppdragshistorikk" placeholder="Søk etter prosjekt, agent eller oppdrag"></label>
+    <p id="missionArchiveCount" class="generated"></p>
+    <div id="missionArchiveList" class="mission-archive-list"></div>
+  </section>
+
+  <aside id="detailPopover" class="detail-popover" role="dialog" aria-label="Detaljer" hidden>
+    <button id="detailClose" class="detail-close" type="button" aria-label="Lukk">×</button>
+    <p id="detailKicker" class="kicker"></p>
+    <h3 id="detailTitle"></h3>
+    <p id="detailDescription" class="detail-description"></p>
+    <dl id="detailRows"></dl>
+  </aside>
+
+  <script src="classic.js"></script>
+</body>
+</html>

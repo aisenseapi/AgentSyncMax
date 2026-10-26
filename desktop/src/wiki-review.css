@@ -1,0 +1,118 @@
+.knowledge-dialog {
+  position: absolute;
+  inset: auto;
+  top: 4%;
+  left: 2%;
+  z-index: 35;
+  width: min(96%, 1720px);
+  max-width: calc(100% - 16px);
+  min-width: min(420px, calc(100% - 16px));
+  height: 92%;
+  min-height: min(260px, calc(100% - 16px));
+  max-height: calc(100% - 16px);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #fff;
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transform: none;
+  resize: both;
+}
+
+.knowledge-dialog.surface-front { z-index: 50; }
+.knowledge-dialog[open] { display: flex; flex-direction: column; }
+.knowledge-dialog.minimized { width: max-content; min-width: 0; height: auto; min-height: 0; max-width: calc(100% - 16px); border-width: 2px; resize: none; }
+.knowledge-dialog.minimized .knowledge-project, .knowledge-dialog.minimized .knowledge-body { display: none; }
+.knowledge-dialog.minimized .knowledge-header { cursor: pointer; }
+.knowledge-dialog.minimized .knowledge-move { display: flex; }
+.knowledge-dialog.minimized .knowledge-minimize-icon { display: none; }
+.knowledge-dialog.minimized .knowledge-expand-icon { display: block; }
+.knowledge-dialog::backdrop { background: rgb(0 0 0 / .52); }
+.knowledge-header { touch-action: none; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; min-width: 0; padding: 9px 10px 9px 14px; border-bottom: 1px solid var(--line); background: var(--surface); cursor: grab; user-select: none; }
+.knowledge-dialog.dragging .knowledge-header { cursor: grabbing; }
+.knowledge-heading { flex: 1 1 auto; min-width: 0; }
+.knowledge-heading h2 { margin: 0; font-size: 16px; }
+.knowledge-project { margin-top: 2px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-window-button { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; }
+.knowledge-window-button:hover, .knowledge-window-button:focus-visible { outline: 0; border-color: var(--line-bright); color: var(--text); }
+.knowledge-move { display: none; cursor: move; }
+.knowledge-dialog.dragging .knowledge-move { cursor: grabbing; }
+.knowledge-move-icon { display: block; width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+.knowledge-minimize-icon { display: block; font-size: 17px; line-height: 1; pointer-events: none; }
+.knowledge-expand-icon { display: none; font-size: 16px; line-height: 1; pointer-events: none; }
+.knowledge-close { margin-left: 0; }
+.knowledge-body { container-type: inline-size; container-name: knowledge; display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; padding: 12px; overflow: hidden; }
+.knowledge-loading, .knowledge-empty, .knowledge-error { margin: auto; max-width: 620px; color: var(--muted); text-align: center; }
+.knowledge-error { color: var(--red); }
+.knowledge-retry { margin-top: 10px; }
+.knowledge-toolbar { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; margin-bottom: 9px; }
+.knowledge-toolbar-note { min-width: 0; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-toolbar .knowledge-filter { flex: 0 0 190px; width: 190px; min-width: 150px; margin-left: auto; }
+
+.knowledge-browser { display: grid; flex: 1 1 auto; grid-template-columns: minmax(245px, 31%) minmax(0, 69%); min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); }
+.knowledge-list-pane { min-width: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent; }
+.knowledge-list { display: flex; flex-direction: column; gap: 7px; padding: 8px; }
+.knowledge-list-empty { padding: 24px 12px; color: var(--muted); text-align: center; }
+.knowledge-item { display: block; width: 100%; padding: 10px 11px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface-2); color: var(--text); cursor: pointer; text-align: left; }
+.knowledge-item:hover, .knowledge-item:focus-visible { outline: 0; border-color: var(--line-bright); background: var(--surface); }
+.knowledge-item.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.knowledge-item-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.knowledge-item-title { min-width: 0; overflow: hidden; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-badge { flex: 0 0 auto; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 9.5px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
+.knowledge-badge.approved { border-color: var(--green); color: var(--green); }
+.knowledge-badge.rejected, .knowledge-badge.conflict { border-color: var(--red); color: var(--red); }
+.knowledge-badge.draft { border-color: var(--amber); color: var(--amber); }
+.knowledge-item-page, .knowledge-item-meta, .knowledge-item-sources { margin-top: 5px; overflow: hidden; color: var(--muted); font-size: 10.5px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-item-page { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.knowledge-item-meta { color: var(--muted-2); }
+
+.knowledge-detail { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+.knowledge-detail[hidden] { display: none; }
+.knowledge-detail-head { flex: 0 0 auto; padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.knowledge-detail-top { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.knowledge-detail-title { min-width: 0; overflow: hidden; font-size: 14px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.knowledge-back { display: none; padding: 4px 8px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); color: var(--muted); cursor: pointer; font: inherit; font-size: 11px; }
+.knowledge-detail-meta { margin-top: 4px; overflow-wrap: anywhere; color: var(--muted); font-size: 10.5px; line-height: 1.4; }
+.knowledge-detail-scroll { flex: 1 1 auto; min-height: 0; padding: 12px 14px 18px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent; }
+.knowledge-safety { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 4px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); color: var(--text); font-size: 11.5px; line-height: 1.45; }
+.knowledge-safety.conflict { border-color: var(--red); }
+.knowledge-field { display: flex; flex-direction: column; gap: 5px; margin-top: 11px; font-size: 11.5px; font-weight: 650; }
+.knowledge-input { display: block; width: 100%; min-width: 0; padding: 8px 9px; border: 1px solid var(--line-bright); border-radius: 4px; background: var(--surface-2); color: var(--text); font: inherit; font-weight: 400; }
+.knowledge-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+textarea.knowledge-input { min-height: 250px; line-height: 1.5; resize: vertical; }
+textarea.knowledge-note { min-height: 68px; }
+.knowledge-section { margin-top: 13px; border-top: 1px solid var(--line); }
+.knowledge-section > summary { padding: 10px 2px 6px; color: var(--muted); cursor: pointer; font-size: 11.5px; font-weight: 650; }
+.knowledge-section > summary:hover, .knowledge-section > summary:focus-visible { outline: 0; color: var(--text); }
+.knowledge-rationale { margin: 4px 0; color: var(--muted); font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-source-list { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0; padding: 0; list-style: none; }
+.knowledge-source { padding: 7px 9px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); font-size: 11px; line-height: 1.4; }
+.knowledge-source code { color: var(--accent); }
+.knowledge-source-reason { margin-left: 6px; color: var(--muted); }
+.knowledge-technical { margin: 5px 0 0; color: var(--muted); font: 10.5px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.knowledge-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); background: var(--panel-bg); }
+.knowledge-button { min-height: 31px; padding: 5px 10px; border: 1px solid var(--line-bright); border-radius: 4px; background: var(--surface-2); color: var(--text); cursor: pointer; font-size: 11.5px; }
+.knowledge-button.primary { margin-left: auto; border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.knowledge-button.reject { border-color: var(--red); color: var(--red); }
+.knowledge-button:disabled { opacity: .55; cursor: not-allowed; }
+.knowledge-save-status { flex: 1 1 180px; min-width: 0; color: var(--muted); font-size: 11px; }
+.knowledge-save-status.error { color: var(--red); }
+.knowledge-more { margin: 0 8px 8px; }
+
+@container knowledge (max-width: 759px) {
+  .knowledge-browser { display: block; }
+  .knowledge-list-pane, .knowledge-detail { height: 100%; border-right: 0; }
+  .knowledge-browser.has-selection .knowledge-list-pane { display: none; }
+  .knowledge-browser:not(.has-selection) .knowledge-detail { display: none; }
+  .knowledge-back { display: inline-block; }
+  .knowledge-toolbar .knowledge-filter { flex-basis: 132px; width: 132px; min-width: 126px; }
+  .knowledge-actions { align-items: stretch; }
+  .knowledge-button.primary { width: 100%; margin-left: 0; order: -1; }
+}
+
+@media (max-width: 759px) {
+  .knowledge-dialog { top: 8px; left: 8px; width: calc(100% - 16px); max-width: calc(100% - 16px); min-width: 0; height: calc(100% - 16px); max-height: calc(100% - 16px); min-height: 0; }
+}
