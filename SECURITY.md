@@ -36,6 +36,20 @@ secret, or prove that two model responses are independent. An unreadable or
 failed check is not a clean result. Human verdicts and agent claims are recorded
 separately; neither is silently promoted into verified truth.
 
+## Local secret protection
+
+Desktop 4.27.0 adds **Hemmelighetsvern**, enabled by default under **Brytere**.
+It checks MAX-prepared model inputs locally and blocks detected secrets before
+those transfers. The setting is independent of sync adapters and external watch.
+Disabling it is persistent and displayed in the UI.
+
+An explicit one-use exception is bound to the checked input and recipient.
+Incomplete scans cannot use that exception. Detection uses patterns and file
+rules, so false positives and missed secrets remain possible. It does not
+control native agents' independent file reads, sanitize existing records or
+backups, or protect arbitrary Git pushes and filesystem synchronization.
+See [secret protection](docs/SECRET-PROTECTION.md) for exact scope and limits.
+
 ## Network behavior
 
 The core filesystem sync and local active-memory worker do not require a cloud

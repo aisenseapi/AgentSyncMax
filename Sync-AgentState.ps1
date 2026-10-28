@@ -1326,8 +1326,8 @@ function Get-PreferredKnownAncestor {
         return $Full
     }
 
-    # A brand-new root below an existing project fragments history (Forlike\code
-    # and Forlike\code\php ended up as separate projects). Attribute the session
+    # A brand-new root below an existing project fragments history (SampleApp\code
+    # and SampleApp\code\php can become separate projects). Attribute the session
     # to the deepest known ancestor instead; genuinely new projects with no
     # known ancestor are unaffected. Disable via
     # projectResolution.preferExistingAncestor = false.

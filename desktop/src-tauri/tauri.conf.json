@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "AgentSync Max",
-  "version": "4.26.2",
+  "version": "4.27.0",
   "identifier": "no.aisense.agentsync",
   "build": {
     "frontendDist": "../src"

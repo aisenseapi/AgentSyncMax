@@ -667,6 +667,14 @@
 
   async function invoke(command, args = {}) {
     switch (command) {
+      case "get_secret_guard_settings":
+        return { enabled: sharedState.secretGuardEnabled !== false, warning: "Forhåndsvisning: ingen filer kontrolleres og ingen data sendes." };
+      case "set_secret_guard_settings":
+        if (typeof args.enabled !== "boolean") throw new Error("Ugyldig innstilling.");
+        sharedState.secretGuardEnabled = args.enabled;
+        return { enabled: args.enabled, warning: "Forhåndsvisning: ingen filer kontrolleres og ingen data sendes." };
+      case "allow_secret_guard_once":
+        throw new Error("Forhåndsvisningen har ingen ekte kontrolltoken.");
       case "get_active_memory_settings":
         return { ...(sharedState.activeMemorySettings || { enabled: true, ramBudgetMib: 16 }) };
       case "set_active_memory_settings":

@@ -478,7 +478,7 @@ function Initialize-AgentSyncHistoryRepository {
     }
 
     # info/attributes outranks any .gitattributes in the project, so the bytes
-    # stored are the bytes on disk: no line-ending conversion, no LFS pointer.
+    # stored are the bytes on disk: no line-break conversion, no LFS pointer.
     Write-AgentSyncHistoryText -Path (Join-Path $Repository 'info\attributes') -Text "* -text -filter -ident`n"
 
     $UnitFile = Join-Path $Repository 'agentsync\unit.json'

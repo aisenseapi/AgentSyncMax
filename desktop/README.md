@@ -1,6 +1,6 @@
 # AgentSync MAX desktop
 
-Windows-first source preview, version 4.26.2. Built with Rust, Tauri 2 and the
+Windows-first source preview, version 4.27.0. Built with Rust, Tauri 2 and the
 operating system's WebView. The frontend is plain JavaScript/CSS under `src/`
 and is embedded at build time. Some labels and messages remain Norwegian.
 
@@ -45,6 +45,18 @@ Mission records under `missions/` may include prompts, output, paths and diffs.
 They are private operational data and must stay out of public Git. The final
 response and recorded file changes should both be reviewed. A successful
 process exit is not proof that the requested task was completed correctly.
+
+## Secret protection
+
+**Brytere → Hemmelighetsvern** controls a local, default-on check of model input
+prepared by MAX. The setting persists; an off indicator remains visible when
+disabled. Findings stop the transfer without displaying the detected value.
+An explicit one-use exception applies only to the checked content and recipient.
+
+This covers prepared prompts/context, selected Aider attachments, review diffs
+and model-based intent resolution. It does not restrict a native agent's own
+file access or sanitize history, checkpoints, Git pushes or filesystem sync.
+See [behavior, limits and tests](../docs/SECRET-PROTECTION.md).
 
 ## Optional validation
 

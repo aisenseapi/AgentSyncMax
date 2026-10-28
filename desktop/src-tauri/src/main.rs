@@ -7,6 +7,7 @@ mod external_watch;
 mod knowledge_review;
 mod process_io;
 mod probe_cache;
+mod secret_guard;
 mod storage_safety;
 
 use checkpoint::{
@@ -2780,6 +2781,7 @@ fn cline_thinking(level: &str) -> Option<&'static str> {
     }
 }
 
+#[cfg(test)]
 fn prepare_agent_command(
     agent: &str,
     executable: &Path,
@@ -2787,6 +2789,20 @@ fn prepare_agent_command(
     prompt: &str,
     model: Option<&str>,
     level: Option<&str>,
+) -> Result<PreparedAgentCommand, String> {
+    let files = if agent == "aider" { aider_context_files(project, prompt) } else { Vec::new() };
+    prepare_agent_command_with_files(agent, executable, project, prompt, model, level, &files, None)
+}
+
+fn prepare_agent_command_with_files(
+    agent: &str,
+    executable: &Path,
+    project: &Path,
+    prompt: &str,
+    model: Option<&str>,
+    level: Option<&str>,
+    context_files: &[PathBuf],
+    aider_settings: Option<&MissionAgentRuntimeSettings>,
 ) -> Result<PreparedAgentCommand, String> {
     let mut command = command_for_executable(executable);
     let cli_project = cli_path(project);
@@ -2905,8 +2921,7 @@ fn prepare_agent_command(
             String::new()
         }
         "aider" => {
-            let runtime_settings = mission_agent_runtime_settings(agent);
-            let context_files = aider_context_files(project, prompt);
+            let runtime_settings = aider_settings.cloned().unwrap_or_else(|| mission_agent_runtime_settings(agent));
             let temp_prompt_path = create_temporary_prompt_file(prompt)?;
             temporary_files.push(temp_prompt_path.clone());
             command
@@ -4687,8 +4702,207 @@ async fn get_mission_summaries(
     .await
 }
 
+// This is assembled and authorized before the mission is persisted. The worker
+// must not reload shared history or select new attachments after that decision.
+struct PreparedMissionInput {
+    prompt: String,
+    files: Vec<PathBuf>,
+    file_hashes: Option<Vec<Vec<u8>>>,
+    aider_settings: MissionAgentRuntimeSettings,
+}
+
+fn mission_attachment_hashes(files: &[PathBuf]) -> Result<Vec<Vec<u8>>, String> {
+    files.iter().map(|path| {
+        for ancestor in path.ancestors() {
+            if ancestor.as_os_str().is_empty() { continue; }
+            let metadata = fs::symlink_metadata(ancestor)
+                .map_err(|_| "Hemmelighetsvern: vedleggsstien kunne ikke kontrolleres.".to_string())?;
+            storage_safety::validate_stored_path(ancestor, &metadata, ancestor == path)
+                .map_err(|_| "Hemmelighetsvern: vedleggsstien er utrygg eller utilgjengelig.".to_string())?;
+        }
+        let meta = fs::symlink_metadata(path)
+            .map_err(|_| "Hemmelighetsvern: et vedlegg kunne ikke kontrolleres. Prøv oppdraget på nytt.".to_string())?;
+        if !meta.is_file() || meta.len() > 1024 * 1024 || storage_safety::validate_stored_path(path, &meta, true).is_err() {
+            return Err("Hemmelighetsvern: et vedlegg kan ikke kontrolleres sikkert.".to_string());
+        }
+        let mut bytes = Vec::new();
+        fs::File::open(path).and_then(|file| file.take(1024 * 1024 + 1).read_to_end(&mut bytes))
+            .map_err(|_| "Hemmelighetsvern: et vedlegg kunne ikke leses.".to_string())?;
+        if bytes.len() > 1024 * 1024 {
+            return Err("Hemmelighetsvern: et vedlegg ble for stort under kontrollen.".to_string());
+        }
+        Ok(Sha256::digest(&bytes).to_vec())
+    }).collect()
+}
+
+fn prepare_mission_input(
+    request: &StartMissionRequest,
+    project: &Path,
+    model: Option<&str>,
+    blind: bool,
+) -> Result<PreparedMissionInput, String> {
+    // A stable header lets the user authorize exactly the same input on retry.
+    // The unique mission id is internal journal metadata, not model input.
+    let prompt = mission_prompt_with_context(
+        "forberedt oppdrag",
+        &request.prompt,
+        request.purpose.as_deref().unwrap_or("writer"),
+        blind,
+        request.share_posts,
+        || resolve_agentsync_home().ok().map(|home| {
+            recent_posts_from_other_agents(&home.join("missions"), &request.project_path,
+                &request.agent, now_unix_ms())
+        }).unwrap_or_default(),
+        || active_memory::prompt_context(&request.project_path),
+    );
+    let mut files = if request.agent == "aider" { aider_context_files(project, &prompt) } else { Vec::new() };
+    if blind {
+        // Match the filtered workspace that the control agent will receive.
+        files.retain(|path| path.strip_prefix(project).is_ok_and(|relative| {
+            !relative.components().any(|part| blind_copy_excluded(&part.as_os_str().to_string_lossy()))
+        }));
+    }
+    let aider_settings = if request.agent == "aider" { mission_agent_runtime_settings("aider") } else { MissionAgentRuntimeSettings::default() };
+    let project_text = path_text(project);
+    let binding = format!("{}\n{}\n{}\n{}\n{}\n{}\n{}\n{}", request.agent, model.unwrap_or_default(),
+        request.mode.as_deref().unwrap_or("shared"), request.level.as_deref().unwrap_or_default(),
+        aider_settings.ollama_api_base.as_deref().unwrap_or_default(), aider_settings.model.as_deref().unwrap_or_default(),
+        request.purpose.as_deref().unwrap_or("writer"), request.source_mission_id.as_deref().unwrap_or_default());
+    let approval = secret_guard::check_transfer(
+        "Agentoppdrag", agent_label(&request.agent).unwrap_or("Valgt agent"),
+        &[("Oppdrag og delt kontekst", &prompt), ("Prosjekt", &project_text), ("Agent og modell", &binding)],
+        &files,
+    )?;
+    let file_hashes = approval.file_hashes;
+    if let Some(before) = &file_hashes {
+        if *before != mission_attachment_hashes(&files)? {
+            return Err("Et vedlegg ble endret under kontrollen. Start oppdraget på nytt for å kontrollere det nye innholdet.".into());
+        }
+    }
+    Ok(PreparedMissionInput { prompt, files, file_hashes, aider_settings })
+}
+
+fn mission_input_files(input: &PreparedMissionInput, project: &Path, run_project: &Path) -> Result<Vec<PathBuf>, String> {
+    let files: Vec<_> = input.files.iter().map(|path| {
+        path.strip_prefix(project).map(|relative| run_project.join(relative))
+            .map_err(|_| "Et vedlegg ligger utenfor oppdragsprosjektet.".to_string())
+    }).collect::<Result<_, _>>()?;
+    if let Some(expected) = &input.file_hashes {
+        if *expected != mission_attachment_hashes(&files)? {
+            return Err("Et vedlegg er endret siden hemmelighetskontrollen. Start oppdraget på nytt for å kontrollere det nye innholdet.".into());
+        }
+    }
+    Ok(files)
+}
+
+#[cfg(test)]
+mod prepared_mission_input_tests {
+    use super::*;
+
+    struct Fixture(PathBuf);
+
+    impl Fixture {
+        fn new() -> Self {
+            static SEQUENCE: AtomicU64 = AtomicU64::new(0);
+            let root = env::temp_dir().join(format!(
+                "agentsync-prepared-input-tests-{}-{}-{}",
+                std::process::id(), now_unix_ms(), SEQUENCE.fetch_add(1, Ordering::Relaxed)
+            ));
+            fs::create_dir(&root).unwrap();
+            Self(root.canonicalize().unwrap())
+        }
+
+        fn project(&self, name: &str) -> PathBuf {
+            let path = self.0.join(name);
+            fs::create_dir(&path).unwrap();
+            path
+        }
+
+        fn input(files: Vec<PathBuf>, contents: Option<&[&[u8]]>) -> PreparedMissionInput {
+            PreparedMissionInput {
+                prompt: "Kontroller vedlegget".into(),
+                files,
+                file_hashes: contents.map(|items| items.iter().map(|bytes| Sha256::digest(bytes).to_vec()).collect()),
+                aider_settings: MissionAgentRuntimeSettings::default(),
+            }
+        }
+    }
+
+    impl Drop for Fixture {
+        fn drop(&mut self) {
+            // Only remove this fixture's resolved directory inside TEMP.
+            if let (Ok(root), Ok(temp)) = (self.0.canonicalize(), env::temp_dir().canonicalize()) {
+                if root.starts_with(&temp) && root.file_name().is_some_and(|name| name.to_string_lossy().starts_with("agentsync-prepared-input-tests-")) {
+                    let _ = fs::remove_dir_all(root);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn changed_attachment_is_stopped_even_when_the_byte_count_is_unchanged() {
+        let fixture = Fixture::new();
+        let project = fixture.project("original");
+        let file = project.join("source.txt");
+        let original = b"value=one\n";
+        fs::write(&file, original).unwrap();
+        let input = Fixture::input(vec![file.clone()], Some(&[original]));
+        assert_eq!(mission_input_files(&input, &project, &project).unwrap(), vec![file.clone()]);
+
+        fs::write(&file, b"value=two\n").unwrap();
+        let error = mission_input_files(&input, &project, &project).unwrap_err();
+        assert!(error.contains("endret siden"));
+        assert!(!error.contains("value=two"));
+    }
+
+    #[test]
+    fn blind_attachment_is_mapped_and_verified_against_the_copied_bytes() {
+        let fixture = Fixture::new();
+        let project = fixture.project("original");
+        let blind = fixture.project("blind");
+        fs::create_dir(project.join("src")).unwrap();
+        fs::create_dir(blind.join("src")).unwrap();
+        let source = project.join("src/code.txt");
+        let copied = blind.join("src/code.txt");
+        let checked = b"checked attachment\n";
+        fs::write(&source, checked).unwrap();
+        fs::write(&copied, checked).unwrap();
+        let input = Fixture::input(vec![source.clone()], Some(&[checked]));
+
+        // A blind run receives the frozen copy, not a later original edit.
+        fs::write(&source, b"later original edit\n").unwrap();
+        assert_eq!(mission_input_files(&input, &project, &blind).unwrap(), vec![copied.clone()]);
+        fs::write(&copied, b"changed blind copy\n").unwrap();
+        assert!(mission_input_files(&input, &project, &blind).is_err());
+    }
+
+    #[test]
+    fn disabled_guard_does_not_add_attachment_content_reads() {
+        let fixture = Fixture::new();
+        let project = fixture.project("original");
+        let missing = project.join("missing.txt");
+        let input = Fixture::input(vec![missing.clone()], None);
+        assert_eq!(mission_input_files(&input, &project, &project).unwrap(), vec![missing.clone()]);
+
+        let guarded = Fixture::input(vec![missing], Some(&[b"checked bytes"]));
+        assert!(mission_input_files(&guarded, &project, &project).is_err());
+    }
+
+    #[test]
+    fn attachments_outside_the_project_are_rejected_even_when_guard_is_off() {
+        let fixture = Fixture::new();
+        let project = fixture.project("original");
+        let sibling = fixture.project("original-sibling");
+        let outside = sibling.join("source.txt");
+        fs::write(&outside, b"outside project\n").unwrap();
+        let input = Fixture::input(vec![outside], None);
+        assert!(mission_input_files(&input, &project, &project).unwrap_err().contains("utenfor oppdragsprosjektet"));
+    }
+}
+
 struct MissionWorkerContext {
     request: StartMissionRequest,
+    input: PreparedMissionInput,
     mission_id: String,
     project: PathBuf,
     executable: PathBuf,
@@ -4738,19 +4952,23 @@ struct AgentRunRequest<'a> {
     executable: &'a Path,
     project: &'a Path,
     prompt: &'a str,
+    context_files: &'a [PathBuf],
+    aider_settings: &'a MissionAgentRuntimeSettings,
     model: Option<&'a str>,
     level: Option<&'a str>,
     cancel: &'a AtomicBool,
 }
 
 fn run_agent_once(run: AgentRunRequest<'_>) -> AgentRunOutcome {
-    let prepared = match prepare_agent_command(
+    let prepared = match prepare_agent_command_with_files(
         run.agent,
         run.executable,
         run.project,
         run.prompt,
         run.model,
         run.level,
+        run.context_files,
+        Some(run.aider_settings),
     ) {
         Ok(value) => value,
         Err(error) => {
@@ -4857,6 +5075,7 @@ fn mission_did_no_work(mission: &MissionState) -> bool {
 fn run_mission_worker(context: MissionWorkerContext) {
     let MissionWorkerContext {
         request,
+        input,
         mission_id,
         project,
         executable,
@@ -4870,7 +5089,6 @@ fn run_mission_worker(context: MissionWorkerContext) {
         run_root,
     } = context;
     let blind_guard = run_root.map(BlindWorkspaceGuard);
-    let blind = blind_guard.is_some();
     let run_project = blind_guard
         .as_ref()
         .map(BlindWorkspaceGuard::path)
@@ -4880,29 +5098,12 @@ fn run_mission_worker(context: MissionWorkerContext) {
         mission.phase = format!("Starter {}", mission.agent_label);
     });
 
-    let prompt = mission_prompt_with_context(
-        &mission_id,
-        &request.prompt,
-        request.purpose.as_deref().unwrap_or("writer"),
-        blind,
-        request.share_posts,
-        || {
-            resolve_agentsync_home()
-                .ok()
-                .map(|home| {
-                    recent_posts_from_other_agents(
-                        &home.join("missions"),
-                        &request.project_path,
-                        &request.agent,
-                        now_unix_ms(),
-                    )
-                })
-                .unwrap_or_default()
-        },
-        || active_memory::prompt_context(&request.project_path),
-    );
     let mut attempt = 0;
     let terminal_outcome = loop {
+        let context_files = match mission_input_files(&input, &project, run_project) {
+            Ok(files) => files,
+            Err(error) => break MissionTerminalOutcome::Failed { phase: "Hemmelighetsvern stoppet oppdraget", error },
+        };
         attempt += 1;
         update_mission_by_id(&mission_id, |mission| {
             mission.phase = if attempt == 1 {
@@ -4916,7 +5117,9 @@ fn run_mission_worker(context: MissionWorkerContext) {
             agent: &request.agent,
             executable: &executable,
             project: run_project,
-            prompt: &prompt,
+            prompt: &input.prompt,
+            context_files: &context_files,
+            aider_settings: &input.aider_settings,
             model: effective_model.as_deref(),
             level: level.as_deref(),
             cancel: &cancel,
@@ -5797,6 +6000,9 @@ fn start_mission_internal(mut request: StartMissionRequest) -> Result<StartMissi
         }
     }
 
+    // Block before checkpoints, blind copies, journal writes and CLI prompt files.
+    let input = prepare_mission_input(&request, &project, mission_model.as_deref(), blind)?;
+
     // Older checkpoints go before this run adds one of its own.
     prune_mission_checkpoints();
     prune_blind_workspaces();
@@ -5947,6 +6153,7 @@ fn start_mission_internal(mut request: StartMissionRequest) -> Result<StartMissi
     std::thread::spawn(move || {
         run_mission_worker(MissionWorkerContext {
             request,
+            input,
             mission_id,
             project,
             executable,
@@ -6257,6 +6464,17 @@ fn call_qwen_code_review(
     model: &str,
 ) -> Result<CodeReviewResult, String> {
     let start_time = std::time::Instant::now();
+    secret_guard::check_transfer(
+        "Kodekontroll",
+        "Ollama-kodekontroll",
+        &[
+            ("Mottakeradresse", ollama_url),
+            ("Modell", model),
+            ("Prosjekt", project_path),
+            ("Diff", diff),
+        ],
+        &[],
+    )?;
     let prompt = format!(
         "Du er en erfaren senior code reviewer, arkitekt og sikkerhetsansvarlig.\n\
         Gjennomfør en grundig og presis kodekontroll av følgende diff for prosjektet '{project_path}' før endringene committes eller pushes.\n\n\
@@ -6327,15 +6545,18 @@ fn call_qwen_code_review(
     let duration_ms = start_time.elapsed().as_millis() as u64;
 
     if !output.status.success() {
-        let err_msg = output.stderr;
-        return Err(format!("Ollama review-kall feilet: {err_msg}"));
+        return Err(format!(
+            "Ollama review-kall feilet ({}). Kontroller forbindelsen til endepunktet.",
+            output.status
+        ));
     }
 
     let raw_text = output.stdout;
-    let parsed_json: Value = serde_json::from_str(&raw_text).map_err(|error| {
-        let preview: String = raw_text.chars().take(2_000).collect();
-        format!("Kunne ikke parse JSON fra Ollama: {error}. Svarutdrag: {preview}")
-    })?;
+    let parsed_json: Value = serde_json::from_str(&raw_text)
+        .map_err(|_| "Ollama returnerte ugyldig JSON. Ingen fullstendig vurdering er registrert.".to_string())?;
+    if let Some(error) = parsed_json.get("error").and_then(Value::as_str) {
+        return Err(safe_ollama_error(error).to_string());
+    }
 
     let review_text = parsed_json
         .get("response")
@@ -7860,6 +8081,17 @@ fn ollama_chat(
     user: &str,
     structured: bool,
 ) -> Result<String, String> {
+    secret_guard::check_transfer(
+        "Modelltolking",
+        "Ollama-tolkemodell",
+        &[
+            ("Mottakeradresse", endpoint),
+            ("Modell", model),
+            ("Systeminstruks", system),
+            ("Brukertekst", user),
+        ],
+        &[],
+    )?;
     let mut payload = serde_json::json!({
         "model": model,
         "messages": [
@@ -7902,12 +8134,15 @@ fn ollama_chat(
         return Err("Ollama-svaret overskred lesegrensen.".into());
     }
     if !output.status.success() {
-        return Err(format!("Ollama-kallet feilet: {}", output.stderr.trim()));
+        return Err(format!(
+            "Ollama-kallet feilet ({}). Kontroller forbindelsen til endepunktet.",
+            output.status
+        ));
     }
     let parsed: Value = serde_json::from_str(&output.stdout)
-        .map_err(|error| format!("Ugyldig JSON fra Ollama: {error}"))?;
+        .map_err(|_| "Ollama returnerte ugyldig JSON.".to_string())?;
     if let Some(error) = parsed.get("error").and_then(Value::as_str) {
-        return Err(format!("Ollama: {error}"));
+        return Err(safe_ollama_error(error).to_string());
     }
     parsed
         .pointer("/message/content")
@@ -7915,6 +8150,23 @@ fn ollama_chat(
         .map(str::to_string)
         .filter(|content| !content.trim().is_empty())
         .ok_or_else(|| "Ollama returnerte et tomt svar.".to_string())
+}
+
+// A provider can echo its input in an error response. Keep only fixed error
+// categories, including the format rejection needed by the resolver retry.
+fn safe_ollama_error(error: &str) -> &'static str {
+    let lower = error.to_ascii_lowercase();
+    let format_rejected = ["format", "think", "structured", "json mode"]
+        .iter()
+        .any(|word| lower.contains(word))
+        && ["not support", "unsupported", "invalid", "unknown", "not allowed", "reject"]
+            .iter()
+            .any(|word| lower.contains(word));
+    if format_rejected {
+        "Ollama rejected the structured format or think option."
+    } else {
+        "Ollama avviste forespørselen. Kontroller at modellen er tilgjengelig og at endepunktet er riktig."
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -8179,6 +8431,7 @@ fn scope_mission_internal(request: ScopeMissionRequest) -> Result<MissionScope, 
             content,
             skipped,
         }) => (model, extract_json_object(&content), skipped),
+        Err(error) if error.starts_with("SECRET_GUARD:") => return Err(error),
         Err(error) => (resolver_model.clone(), None, vec![error]),
     };
     let Some(value) = parsed else {
@@ -8349,14 +8602,22 @@ fn ask_resolver_with(
         // JSON mode first; a model that rejects the flag gets a plain retry.
         let reply = chat(model, remaining().max(1), true).or_else(
             |structured_error| {
+                if structured_error.starts_with("SECRET_GUARD:") {
+                    return Err(structured_error);
+                }
                 // A transport outage does not improve by removing JSON mode.
                 // Retry only an explicit rejection of the requested format.
                 let lower = structured_error.to_ascii_lowercase();
                 let format_rejected = ["format", "think", "structured", "json mode"].iter().any(|word| lower.contains(word))
                     && ["not support", "unsupported", "invalid", "unknown", "not allowed", "reject"].iter().any(|word| lower.contains(word));
                 if !format_rejected || remaining() == 0 { return Err(structured_error); }
-                chat(model, remaining(), false)
-                    .map_err(|plain_error| format!("{structured_error} / {plain_error}"))
+                chat(model, remaining(), false).map_err(|plain_error| {
+                    if plain_error.starts_with("SECRET_GUARD:") {
+                        plain_error
+                    } else {
+                        format!("{structured_error} / {plain_error}")
+                    }
+                })
             },
         );
         match reply {
@@ -8369,6 +8630,9 @@ fn ask_resolver_with(
                 });
             }
             Err(error) => {
+                if error.starts_with("SECRET_GUARD:") {
+                    return Err(error);
+                }
                 remember_resolver_failure(endpoint, model, &error);
                 skipped.push(format!("{model} ({error})"));
             }
@@ -8446,12 +8710,8 @@ fn resolve_intent_internal(request: ResolveIntentRequest) -> Result<IntentResolu
             resolver_model = reply.model;
             skipped = reply.skipped;
             let content = reply.content;
-            extract_json_object(&content).ok_or_else(|| {
-                format!(
-                    "{resolver_model} svarte uten gyldig JSON: {}",
-                    content.chars().take(300).collect::<String>()
-                )
-            })
+            extract_json_object(&content)
+                .ok_or_else(|| "Tolkemodellen svarte uten gyldig JSON.".to_string())
         }
         Err(error) => Err(error),
     };
@@ -8479,6 +8739,7 @@ fn resolve_intent_internal(request: ResolveIntentRequest) -> Result<IntentResolu
                 }),
             })
         }
+        Err(error) if error.starts_with("SECRET_GUARD:") => Err(error),
         Err(error) => {
             let choices = fallback_intent_choices(
                 &text,
@@ -10803,6 +11064,53 @@ mod intent_tests {
     }
 
     #[test]
+    fn secret_guard_stops_resolver_retries_without_caching_a_model_failure() {
+        let endpoint = "test://secret-guard-first-transfer";
+        // Deliberately contains retry keywords: structured error data must not
+        // accidentally be interpreted as a provider rejecting JSON mode.
+        let blocked = "SECRET_GUARD:{\"message\":\"unsupported structured format\"}";
+        let mut calls = Vec::new();
+        let result = ask_resolver_with(endpoint, &["first".into(), "never".into()], 5, |model, _, structured| {
+            calls.push((model.to_string(), structured));
+            Err(blocked.to_string())
+        });
+        assert_eq!(result.err().as_deref(), Some(blocked));
+        assert_eq!(calls, vec![("first".into(), true)]);
+        assert!(resolver_recent_failure(endpoint, "first").is_none());
+        assert!(resolver_recent_failure(endpoint, "never").is_none());
+    }
+
+    #[test]
+    fn secret_guard_on_plain_retry_is_preserved_and_stops_model_fallback() {
+        let endpoint = "test://secret-guard-plain-transfer";
+        let blocked = "SECRET_GUARD:{\"code\":\"SECRET_GUARD\",\"token\":\"test-only\"}";
+        let mut calls = Vec::new();
+        let result = ask_resolver_with(endpoint, &["first".into(), "never".into()], 5, |model, _, structured| {
+            calls.push((model.to_string(), structured));
+            if structured {
+                Err("format is not supported".into())
+            } else {
+                Err(blocked.to_string())
+            }
+        });
+        assert_eq!(result.err().as_deref(), Some(blocked));
+        assert_eq!(calls, vec![("first".into(), true), ("first".into(), false)]);
+        assert!(resolver_recent_failure(endpoint, "first").is_none());
+        assert!(resolver_recent_failure(endpoint, "never").is_none());
+    }
+
+    #[test]
+    fn ollama_error_categories_do_not_echo_server_supplied_input() {
+        let marker = "private-request-content-must-not-appear";
+        let format_error = safe_ollama_error(&format!("unsupported structured format: {marker}"));
+        assert_eq!(format_error, "Ollama rejected the structured format or think option.");
+        assert!(!format_error.contains(marker));
+        let other_error = safe_ollama_error(&format!("invalid request: {marker}"));
+        assert!(other_error.contains("Kontroller"));
+        assert!(!other_error.contains(marker));
+    }
+
+    #[test]
     fn exhausted_resolver_budget_stops_before_another_model_or_retry() {
         let mut calls = 0;
         let result = ask_resolver_with("test://deadline", &["slow-a".into(), "never-b".into()], 1, |_, _, _| {
@@ -12595,6 +12903,21 @@ async fn start_mission(request: StartMissionRequest) -> Result<StartMissionResul
 }
 
 #[tauri::command]
+async fn get_secret_guard_settings() -> Result<secret_guard::Settings, String> {
+    off_main_thread("Hemmelighetsvernet", secret_guard::settings).await?
+}
+
+#[tauri::command]
+async fn set_secret_guard_settings(enabled: bool) -> Result<secret_guard::Settings, String> {
+    off_main_thread("Hemmelighetsvernet", move || secret_guard::configure(enabled)).await?
+}
+
+#[tauri::command]
+async fn allow_secret_guard_once(token: String) -> Result<(), String> {
+    off_main_thread("Hemmelighetsvernet", move || secret_guard::allow_once(token)).await?
+}
+
+#[tauri::command]
 async fn cancel_mission(mission_id: Option<String>) -> Result<ActionResult, String> {
     off_main_thread("Avbrytingen", move || cancel_mission_internal(mission_id)).await?
 }
@@ -12714,6 +13037,9 @@ fn main() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            get_secret_guard_settings,
+            set_secret_guard_settings,
+            allow_secret_guard_once,
             get_active_memory,
             get_active_memory_settings,
             set_active_memory_settings,
@@ -12957,6 +13283,7 @@ mod tests {
                 validator_generation: None,
                 share_posts: None,
             },
+            input: PreparedMissionInput { prompt: "Kontroller koden".into(), files: Vec::new(), file_hashes: Some(Vec::new()), aider_settings: MissionAgentRuntimeSettings::default() },
             mission_id: mission_id.clone(),
             project: project.clone(),
             executable: project.join("finnes-ikke-codex.exe"),
@@ -14361,6 +14688,7 @@ mod tests {
                 validator_generation: None,
                 share_posts: None,
             },
+            input: PreparedMissionInput { prompt: "Kontroller feilhåndteringen".into(), files: Vec::new(), file_hashes: Some(Vec::new()), aider_settings: MissionAgentRuntimeSettings::default() },
             mission_id: mission_id.clone(),
             project: project.clone(),
             executable: project.join("finnes-ikke-codex.exe"),

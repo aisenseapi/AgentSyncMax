@@ -7,7 +7,7 @@ sync engine. It connects agent sessions to the project they belong to, keeps
 provider-native history, and brings missions, output, file changes and review
 findings into one place.
 
-**Source preview:** desktop 4.26.2, sync engine 4.25.1. This repository is a
+**Source preview:** desktop 4.27.0, sync engine 4.25.1. This repository is a
 source snapshot, not a promise of a signed installer, hosted service or supported
 binary release. The interface still contains Norwegian text. It has been used
 in a single-owner workflow; that is not validation across arbitrary machines,
@@ -30,6 +30,9 @@ teams or provider versions.
   without the desktop app.
 - An optional, bounded local index of recent project sources, with disk storage
   and an in-process RAM cache. This is not a RAM disk or a backup.
+- Local secret protection, enabled by default, for prompts, selected attachments
+  and diffs that MAX supplies to models. The switch and scoped one-use exceptions
+  are described in [secret protection](docs/SECRET-PROTECTION.md).
 
 The project is the organizing unit, not a particular vendor's chat window.
 This does **not** mean one provider can natively resume another provider's
@@ -91,6 +94,7 @@ local sync, memory and missions and does not make them depend on that service. R
 - [Finding evaluations](docs/FUNN-OG-AVKLARING.md)
 - [Local history and backup limitations](docs/VARIG-HISTORIKK.md)
 - [Security](SECURITY.md)
+- [Secret-protection settings and boundaries](docs/SECRET-PROTECTION.md)
 - [Source-preview changelog](CHANGELOG.md)
 
 Bug reports are welcome with a minimal, sanitized reproduction, platform,

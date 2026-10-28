@@ -1,6 +1,6 @@
 [package]
 name = "agentsync-desktop"
-version = "4.26.2"
+version = "4.27.0"
 description = "AgentSync desktop control center"
 license = "MIT"
 repository = "https://github.com/aisenseapi/AgentSyncMax"

@@ -12,7 +12,7 @@
 // actual task. Agents still run like their own CLI launched in the project
 // folder, so native session state and .agent-state routing stay correct.
 
-const invoke = window.__TAURI__?.core?.invoke;
+const invoke = window.__TAURI__?.core?.invoke && (window.AgentSyncSecretGuard?.invoke || window.__TAURI__.core.invoke);
 const byId = (id) => document.getElementById(id);
 
 const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity", "cline", "aider"];
@@ -1279,6 +1279,7 @@ function renderProjectList() {
 // from the newly selected project is shown. The validator itself stays on when
 // enabled, but its visible state is synchronously moved to the new project.
 function resetProjectBoundSurfaces(nextProject) {
+  window.AgentSyncSecretGuard?.projectChanged?.(nextProject);
   window.AgentSyncActiveMemory?.projectChanged?.(nextProject);
   window.AgentSyncPeek?.hide?.({ force: true });
   window.AgentSyncEvaluations?.close?.();
@@ -2139,6 +2140,8 @@ window.AgentSyncActiveMemory?.init({ button: byId("activeMemoryButton"), parent:
 // The switch panel. Every row says what it does in the user's terms, and a row
 // whose master is off says which master, rather than going quietly grey.
 // ---------------------------------------------------------------------------
+window.AgentSyncSecretGuard?.init({ indicatorParent: byId("topBar") });
+
 function renderSettings() {
   const settings = window.AgentSyncSettings;
   const body = byId("settingsBody");
@@ -2198,9 +2201,10 @@ function renderSettings() {
   const changed = settings.changedCount();
   window.AgentSyncExternalWatch?.mount(body);
   window.AgentSyncActiveMemory?.mountSettings(body);
+  window.AgentSyncSecretGuard?.mountSettings(body);
   byId("settingsChanged").textContent = changed
-    ? `${changed} ${changed === 1 ? "appbryter" : "appbrytere"} er ikke standard · vakt og minne styres separat`
-    : "appbryterne står på standard · vakt og minne styres separat";
+    ? `${changed} ${changed === 1 ? "appbryter" : "appbrytere"} er ikke standard · vakt, minne og hemmelighetsvern styres separat`
+    : "appbryterne står på standard · vakt, minne og hemmelighetsvern styres separat";
   const dot = byId("railSettingsDot");
   if (dot) dot.hidden = changed === 0;
   if (focusedId) byId(`setting-${focusedId}`)?.focus();
@@ -2798,7 +2802,11 @@ async function startMission(options) {
       scope = await invoke("scope_mission", {
         request: { prompt, agent, resolverModel: preferredResolverModel() || null }
       });
-    } catch (_) {
+    } catch (error) {
+      if (window.AgentSyncSecretGuard?.isBlocked(error)) {
+        showBarInfo(String(error.message || error), { kind: "warn" });
+        return;
+      }
       // Scoping is advisory; a resolver that is down must not stop a run.
       scope = null;
     } finally {

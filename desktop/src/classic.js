@@ -1,4 +1,5 @@
-const invoke = window.__TAURI__?.core?.invoke;
+const invoke = window.__TAURI__?.core?.invoke && (window.AgentSyncSecretGuard?.invoke || window.__TAURI__.core.invoke);
+window.AgentSyncSecretGuard?.init();
 const listen = window.__TAURI__?.event?.listen;
 
 const agents = [
@@ -777,6 +778,7 @@ function activateView(view) {
 
 function selectProjectFromSidebar(path) {
   const projectPath = displayPath(path);
+  window.AgentSyncSecretGuard?.projectChanged?.(projectPath);
   state.selectedProjectPath = projectPath;
   byId("missionProject").value = projectPath;
   state.projectSidebarSignature = "";
@@ -2308,6 +2310,7 @@ byId("fontIncrease").addEventListener("click", () => shiftFontSize(1));
 byId("missionProject").addEventListener("focus", () => setMissionProjectPickerOpen(true));
 byId("missionProject").addEventListener("click", () => setMissionProjectPickerOpen(true));
 byId("missionProject").addEventListener("input", () => {
+  window.AgentSyncSecretGuard?.projectChanged?.(byId("missionProject").value);
   renderMissionWorkspace(null);
   setMissionProjectPickerOpen(true);
   const exact = state.missionProjects.find((project) => normalizedMissionProjectPath(project.path) === normalizedMissionProjectPath(byId("missionProject").value));
@@ -2329,6 +2332,7 @@ byId("missionProjectPicker").addEventListener("click", (event) => {
   const option = event.target.closest(".mission-project-option");
   if (!option) return;
   byId("missionProject").value = decodeURIComponent(option.dataset.projectPath);
+  window.AgentSyncSecretGuard?.projectChanged?.(byId("missionProject").value);
   state.selectedProjectPath = byId("missionProject").value;
   state.projectSidebarSignature = "";
   setMissionProjectPickerOpen(false);
@@ -2399,6 +2403,7 @@ byId("missionFocusFollowUp").addEventListener("click", () => {
   activateView("mission");
   byId("missionProject").value = projectPath;
   state.selectedProjectPath = projectPath;
+  window.AgentSyncSecretGuard?.projectChanged?.(projectPath);
   state.projectSidebarSignature = "";
   state.selectedMissionAgent = mission.agent || state.selectedMissionAgent;
   renderMissionAgents(array(state.missionControl?.agents));

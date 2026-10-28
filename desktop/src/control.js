@@ -13,7 +13,7 @@
 // origin with the main window, so project and theme follow it through
 // localStorage without any plumbing of their own.
 
-const invoke = window.__TAURI__?.core?.invoke;
+const invoke = window.__TAURI__?.core?.invoke && (window.AgentSyncSecretGuard?.invoke || window.__TAURI__.core.invoke);
 const AGENT_ORDER = ["claude", "codex", "opencode", "antigravity", "cline", "aider"];
 const AGENT_MARKS = { claude: "✳", codex: "◉", opencode: "OC", antigravity: "A", cline: "C", aider: "ai" };
 const LEVEL_LABELS = { "": "Standard", normal: "Normal", max: "Max", ultra: "Ultra" };
